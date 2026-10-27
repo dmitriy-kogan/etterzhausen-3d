@@ -1,0 +1,517 @@
+<meta name="robots" content="noindex,nofollow">
+<title>Etterzhausen Baufeld 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500&family=Libre+Franklin:wght@400;500;600&display=swap">
+<style>
+/* Layout: Vollbild-Modellansicht, rechts schmale Bedienleiste (am Handy als unteres Blatt), links oben Schriftfeld wie auf einem Planblatt. */
+:root{
+  --bg:#e8ecea; --stage-top:#eef1ef; --stage-bot:#c7d0cd;
+  --panel:rgba(250,251,250,.92); --fg:#1b2420; --muted:#5a6660; --line:#c8d0cb;
+  --accent:#1f6f54; --accent-fg:#ffffff; --warn:#a15c07; --chip:#e4eae6;
+  --font-body:"Libre Franklin",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"Chivo Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --shadow:0 6px 24px rgba(20,35,30,.14);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1311; --stage-top:#25302d; --stage-bot:#0f1614;
+  --panel:rgba(18,26,23,.92); --fg:#e6ece8; --muted:#9aa8a1; --line:#2c3833;
+  --accent:#5fd0a0; --accent-fg:#06231a; --warn:#e6b25a; --chip:#1f2a26; --shadow:0 6px 24px rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1311; --stage-top:#25302d; --stage-bot:#0f1614;
+  --panel:rgba(18,26,23,.92); --fg:#e6ece8; --muted:#9aa8a1; --line:#2c3833;
+  --accent:#5fd0a0; --accent-fg:#06231a; --warn:#e6b25a; --chip:#1f2a26; --shadow:0 6px 24px rgba(0,0,0,.45); color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.4;overflow:hidden;margin:0}
+#stage{position:fixed;inset:0;background:linear-gradient(180deg,var(--stage-top),var(--stage-bot));touch-action:none}
+#stage canvas{display:block;width:100%;height:100%;outline:none}
+#dim{position:fixed;inset:0;background:#050a18;opacity:0;pointer-events:none;transition:opacity .3s}
+.hud{position:fixed;z-index:5}
+#titleblock{top:max(16px,env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);padding:10px 14px 10px;max-width:min(360px,calc(100vw - 32px));backdrop-filter:blur(6px)}
+#titleblock .k{font:500 10.5px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#titleblock h1{margin:5px 0 2px;font:600 17px/1.2 var(--font-body);text-wrap:balance}
+#titleblock p{margin:0;font-size:12px;color:var(--muted)}
+#titleblock .st{display:inline-block;margin-top:7px;font:500 10.5px/1 var(--font-mono);letter-spacing:.04em;padding:4px 6px;background:var(--chip);color:var(--warn);border:1px solid var(--line)}
+#panel{top:max(16px,env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));width:292px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(6px)}
+#panel .scroll{overflow:auto;padding:4px 14px 14px;min-height:0;overscroll-behavior:contain}
+#panel h2{font:500 10.5px/1 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+#panel h2::after{content:"";flex:1;border-top:1px solid var(--line)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button,select,input{font:inherit;color:inherit}
+.btn{background:var(--chip);border:1px solid var(--line);padding:7px 8px;text-align:left;cursor:pointer;font-size:12.5px;line-height:1.2;min-height:34px}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"],.btn.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line)}
+.seg label{display:block;text-align:center;padding:8px 6px;cursor:pointer;font-weight:500;background:var(--chip)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked+span{display:block;margin:-8px -6px;padding:8px 6px;background:var(--accent);color:var(--accent-fg)}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.chk{display:flex;align-items:center;gap:9px;padding:5px 0;cursor:pointer;font-size:13px}
+.chk input{accent-color:var(--accent);width:16px;height:16px;margin:0;flex:none}
+.chk .sw{width:14px;height:14px;flex:none;border:1px solid rgba(0,0,0,.3)}
+.chk small{color:var(--muted);font-size:11.5px}
+.row{display:flex;gap:8px;align-items:center}
+select{width:100%;padding:7px 8px;background:var(--chip);border:1px solid var(--line)}
+input[type=range]{width:100%;accent-color:var(--accent);margin:8px 0 2px}
+.read{font:400 11.5px/1.35 var(--font-mono);color:var(--muted)}
+details{border-top:1px solid var(--line);margin-top:14px;padding-top:10px}
+summary{cursor:pointer;font:500 10.5px/1 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:2px 0 8px}
+details p,details li{font-size:12.5px;margin:0 0 7px;color:var(--fg)}
+details ul{margin:0;padding-left:16px}
+details .warn{color:var(--warn)}
+#toggle{display:none}
+#hint{left:50%;transform:translateX(-50%);bottom:max(14px,env(safe-area-inset-bottom,0px));font:400 11.5px/1.3 var(--font-mono);color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:6px 10px;white-space:nowrap}
+#compass{left:max(16px,env(safe-area-inset-left,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
+#compass svg{width:100%;height:100%;transition:none}
+#load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:20;background:var(--bg);font:500 12px var(--font-mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+#load .bar{width:220px;height:3px;background:var(--line)}
+#load .bar i{display:block;height:100%;width:0;background:var(--accent)}
+#leaders{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:3;pointer-events:none;overflow:visible}
+.lab{position:fixed;left:0;top:0;z-index:4;pointer-events:none;font:500 10.5px/1 var(--font-mono);color:#fff;background:rgba(22,40,33,.86);padding:4px 6px;white-space:nowrap;transform:translate(-50%,-100%);border-left:3px solid var(--accent)}
+.lab.bio{border-left-color:#e4572e}
+.bio-row{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:6px 2px;cursor:pointer;font-size:12.5px;line-height:1.25;color:var(--fg)}
+.bio-row:hover{background:var(--chip)}
+.bio-row .sw{width:12px;height:12px;flex:none;margin-top:2px;border:1px solid rgba(0,0,0,.35)}
+.bio-row small{display:block;color:var(--muted);font-size:11.5px}
+#biolist{border-bottom:1px solid var(--line)}
+.lab.str{background:rgba(48,52,58,.85);border-left-color:#9aa0a8}
+#meas{left:50%;top:max(16px,env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--accent);color:var(--accent-fg);font:500 12px/1.3 var(--font-mono);padding:7px 12px;display:none}
+.mlab{position:fixed;left:0;top:0;z-index:6;pointer-events:none;font:500 11.5px/1.25 var(--font-mono);color:#111;background:#ffe48a;border:1px solid #6b5400;padding:4px 7px;transform:translate(-50%,-130%);white-space:nowrap}
+@media (max-width:760px){
+  #panel{top:auto;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));width:auto;max-height:52vh;bottom:max(12px,env(safe-area-inset-bottom,0px));transition:transform .25s}
+  #panel.closed{transform:translateY(calc(100% + 24px))}
+  #toggle{display:block;position:fixed;z-index:6;right:max(12px,env(safe-area-inset-right,0px));top:max(12px,env(safe-area-inset-top,0px));padding:9px 12px;background:var(--accent);color:var(--accent-fg);border:0;font-weight:600}
+  #titleblock{max-width:calc(100vw - 130px)}
+  #titleblock h1{font-size:15px}#titleblock p{display:none}
+  #hint,#compass{display:none}
+}
+@media (prefers-reduced-motion:reduce){#panel{transition:none}}
+</style>
+
+<div id="stage" aria-label="3D-Ansicht Baufeld Etterzhausen"></div>
+<div id="dim"></div>
+<svg id="leaders" aria-hidden="true"></svg>
+<div id="labels"></div>
+
+<div class="hud" id="titleblock">
+  <div class="k">Flst. 198 / 198/21 · Etterzhausen</div>
+  <h1>Teilflächen B112 und L122</h1>
+  <p>Straße und drei Doppelhäuser, Konzeptstudie</p>
+  <span class="st">KEINE GENEHMIGUNGSPLANUNG</span>
+</div>
+<div class="hud" id="meas" role="status"></div>
+<button id="toggle" aria-expanded="true">Ebenen</button>
+
+<aside class="hud" id="panel" aria-label="Ansicht und Ebenen">
+ <div class="scroll">
+  <h2>Ansicht</h2>
+  <div class="grid2" id="cams"></div>
+
+  <h2>Zustand</h2>
+  <div class="seg" role="radiogroup" aria-label="Zustand">
+    <label><input type="radio" name="mode" value="bestand"><span>Bestand</span></label>
+    <label><input type="radio" name="mode" value="planung" checked><span>Planung</span></label>
+  </div>
+
+  <h2>Ebenen</h2>
+  <label class="chk"><input type="checkbox" data-l="waende" checked>Stützwände</label>
+  <label class="chk"><input type="checkbox" data-l="fahrzeuge" checked>Fahrzeuge und Leuchten</label>
+  <label class="chk"><input type="checkbox" data-l="kontext" checked><span>Umgebungsbauten<br><small>Höhe angenommen</small></span></label>
+  <label class="chk"><input type="checkbox" data-l="baeume" checked><span>Bäume und Gehölze<br><small>schematisch, nicht kartiert</small></span></label>
+  <label class="chk"><input type="checkbox" data-l="kontur">Höhenlinien 1 m</label>
+  <label class="chk"><input type="checkbox" data-l="biotop"><span class="sw" style="background:linear-gradient(90deg,#d62828 0 17%,#f79632 17% 34%,#52b788 34% 51%,#ecc92a 51% 68%,#4276d6 68% 84%,#9e68d6 84%)"></span><span>Biotopflächen farbig füllen<br><small>Umrisse sind mit „Beschriftung“ immer sichtbar</small></span></label>
+  <label class="chk"><input type="checkbox" data-l="anbau"><span class="sw" style="background:repeating-linear-gradient(135deg,#b00020 0 2px,transparent 2px 5px)"></span>20 m Anbauverbot St 2660</label>
+  <label class="chk"><input type="checkbox" data-l="eingriff"><span class="sw" style="background:#ffc800"></span><span>Eingriffszone<br><small>inkl. 2 m Arbeitsraum</small></span></label>
+  <label class="chk"><input type="checkbox" data-l="labels" checked><span>Beschriftung mit Linien<br><small>Linie zeigt auf die gemeinte Fläche</small></span></label>
+
+  <h2>Biotopflächen</h2>
+  <div id="biolist"></div>
+  <p class="read" style="margin:6px 0 0">Alle 12 Kartierpolygone. Klick fliegt zur Fläche. Fläche = Kartierfläche des Polygons, nicht Flurstücksfläche.</p>
+
+  <h2>Sonnenstand</h2>
+  <select id="season" aria-label="Jahreszeit">
+    <option value="sommer">Sommer · 21. Juni</option>
+    <option value="aequi">Frühjahr/Herbst · 21. März</option>
+    <option value="winter">Winter · 21. Dezember</option>
+  </select>
+  <input type="range" id="hour" min="4" max="22" step="0.25" value="15.5" aria-label="Uhrzeit">
+  <div class="read" id="sunread"></div>
+
+  <h2>Messen</h2>
+  <div class="row"><button class="btn" id="mbtn" style="flex:1">Strecke messen</button><button class="btn" id="mclr">Löschen</button></div>
+
+  <details>
+    <summary>Zahlen und Hinweise</summary>
+    <ul>
+      <li>3 Doppelhäuser = 6 Wohneinheiten, je 12,0 × 9,3 m: Garage/UG, OG, Staffelgeschoss, Gründach. Höhe 9,1 m über Garagenboden.</li>
+      <li>Planstraße: Fahrbahn 5,0 m, rund <span id="rl">151</span> m ab St 2660, Gefälle 0,5 % bis 4,6 %.</li>
+      <li>Überplant: L122 (bisher L112) ca. 1.208 von 2.038 m² (59 %), B112 (bisher B212) ca. 420 von 1.037 m² (40 %). Prozente beziehen sich auf die Kartierpolygone.</li>
+      <li>Aushub ca. 2.300 m³. Stützwände: hinter den Häusern 3,7–4,9 m, an der Straße 0,8–1,8 m.</li>
+      <li>Gehölze in der Eingriffszone (schematisch): L122 <span id="tl"></span>, B112 <span id="tb"></span> Bäume.</li>
+      <li class="warn">Konzept, keine Genehmigung. L122 ist gesetzlich geschütztes Biotop (§ 30, PAR30 = Ja). Die Hecke B112 fällt laut Gutachten vom 27.10.2026 unter § 39 / Art. 16, nicht unter § 30. Das ist keine Baufreigabe.</li>
+      <li>Nur B112 und L122 sind Planungsflächen. Codes nach dem korrigierten Gutachten vom 27.10.2026 (die GIS-Datei vom 19.10. trägt noch B212 und L112). Die übrigen 10 Biotopflächen sind Kartierung und wurden nicht überplant.</li>
+      <li>Gelände aus 11 Schnitten des Haller-Entwurfs, Genauigkeit ±1 m. <b>Westlich und nördlich der Schnitte ist das Gelände nur extrapoliert</b> (reine Orientierung, Höhen dort unbelegt). Umgebungsbauten: Grundriss aus dem Haller-Plan, Höhen angenommen. Baumhöhen und -positionen sind nicht kartiert.</li>
+    </ul>
+  </details>
+ </div>
+</aside>
+
+<div class="hud" id="compass" aria-hidden="true">
+  <svg viewBox="0 0 54 54"><g id="needle"><path d="M27 7 L33 29 L27 25 L21 29 Z" fill="#d6402b"/><path d="M27 47 L33 29 L27 25 L21 29 Z" fill="var(--muted)"/></g><text x="27" y="6.5" text-anchor="middle" font-size="7" font-family="Chivo Mono,monospace" fill="var(--fg)" id="ntxt">N</text></svg>
+</div>
+<div class="hud" id="hint">Ziehen: drehen · Scrollen: zoomen · Rechtsklick/zwei Finger: verschieben · Doppelklick: Punkt anfahren</div>
+<div id="load"><div>Modell wird geladen</div><div class="bar"><i id="lbar"></i></div></div>
+
+<script type="importmap">
+{"imports":{"three":"./lib/three/build/three.module.js","three/addons/":"./lib/three/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {Sky} from 'three/addons/objects/Sky.js';
+import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
+
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const coarse=matchMedia('(pointer:coarse)').matches;
+const enu=(p)=>new THREE.Vector3(p[0],p[2],-p[1]);       // lokal (E,N,U) -> three (x,y,z)
+const S={mode:'planung',L:{waende:1,fahrzeuge:1,kontext:1,baeume:1,kontur:0,biotop:0,anbau:0,eingriff:0,labels:1},hour:15.5,season:'sommer'};
+
+// ---------- Renderer / Szene
+const stage=$('#stage');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,coarse?1.75:2));
+renderer.setClearColor(0x000000,0);
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=0.78;
+stage.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(38,1,0.4,2500);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=0.08; controls.maxPolarAngle=Math.PI*0.495; controls.minDistance=2.5; controls.maxDistance=560; controls.zoomToCursor=true; controls.screenSpacePanning=true;
+
+const sun=new THREE.DirectionalLight(0xfff3df,3.2); sun.castShadow=true;
+const ss=coarse?2048:4096; sun.shadow.mapSize.set(ss,ss);
+Object.assign(sun.shadow.camera,{left:-135,right:135,top:135,bottom:-135,near:1,far:700}); sun.shadow.bias=-0.0003; sun.shadow.normalBias=0.06;
+scene.add(sun,sun.target);
+const moon=new THREE.DirectionalLight(0x8fa8ff,0); moon.position.set(-80,120,60); scene.add(moon);
+const hemi=new THREE.HemisphereLight(0xcfe3ff,0x6d6a55,0.5); scene.add(hemi);
+const sky=new Sky(); sky.scale.setScalar(5000);
+Object.assign(sky.material.uniforms,{turbidity:{value:3.5},rayleigh:{value:1.1},mieCoefficient:{value:0.005},mieDirectionalG:{value:0.8}});
+const envScene=new THREE.Scene(); envScene.add(sky);
+const pmrem=new THREE.PMREMGenerator(renderer); let envRT=null;
+
+// ---------- Sonne
+const LAT=49.04*Math.PI/180;
+const DECL={sommer:23.44,aequi:0,winter:-23.44};
+function sunPos(){
+  const d=DECL[S.season]*Math.PI/180;
+  const dst=S.season==='sommer'?1:0;
+  const solar=S.hour-1-dst-0.2+1;       // Ortszeit (MEZ/MESZ) -> mittlere Sonnenzeit (Länge 12,0 °E)
+  const H=(solar-12)*15*Math.PI/180;
+  const sinEl=Math.sin(LAT)*Math.sin(d)+Math.cos(LAT)*Math.cos(d)*Math.cos(H);
+  const el=Math.asin(sinEl);
+  const A=Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(LAT)-Math.tan(d)*Math.cos(LAT));
+  const az=(A*180/Math.PI+180+360)%360;
+  return {el:el*180/Math.PI,az};
+}
+const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
+let center=new THREE.Vector3(0,0,0), lampLights=[], glassMats=[], stdMats=[];
+let sunDirty=true;
+function updateSun(){
+  const {el,az}=sunPos(); const elr=el*Math.PI/180, azr=az*Math.PI/180;
+  const dir=new THREE.Vector3(Math.sin(azr)*Math.cos(elr),Math.sin(elr),-Math.cos(azr)*Math.cos(elr));
+  const f=smooth(-1.5,10,el), g=smooth(-8,4,el);
+  sun.position.copy(center).addScaledVector(dir,320); sun.target.position.copy(center);
+  sun.intensity=4.6*f; sun.visible=f>0.001;
+  sun.color.setHSL(0.09,0.55*(1-smooth(5,35,el))+0.15,0.92);
+  hemi.intensity=0.16+0.12*g; moon.intensity=0.55*(1-g);
+  const night=1-g;
+  $('#dim').style.opacity=(0.45*night).toFixed(2);
+  sky.material.uniforms.sunPosition.value.copy(dir);
+  if(envRT) envRT.dispose(); envRT=pmrem.fromScene(envScene); scene.environment=envRT.texture;
+  const ei=0.10+0.34*g; stdMats.forEach(m=>m.envMapIntensity=m.userData.env!==undefined?m.userData.env*ei*1.6:ei);
+  lampLights.forEach(l=>l.intensity=night>0.45?22*night:0);
+  glassMats.forEach(m=>{m.emissive.setRGB(1,0.72,0.38); m.emissiveIntensity=night>0.45?0.55*night:0; m.opacity=night>0.45?0.62:0.32});
+  const dirs=['N','NO','O','SO','S','SW','W','NW'][Math.round(az/45)%8];
+  const hh=Math.floor(S.hour), mm=Math.round((S.hour-hh)*60);
+  $('#sunread').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')} Uhr · Sonne ${el>0?el.toFixed(0)+'° hoch':'unter dem Horizont'} · ${dirs}`;
+}
+
+// ---------- Laden
+const [meta,trees,contours]=await Promise.all(['meta.json','trees.json','contours.json'].map(f=>fetch(f).then(r=>r.json())));
+$('#rl').textContent=Math.round(meta.stats.road_len);
+$('#tl').textContent=`${meta.stats.tree_rem.L112[0]} von ${meta.stats.tree_rem.L112[1]}`; $('#tb').textContent=`${meta.stats.tree_rem.B212[0]} von ${meta.stats.tree_rem.B212[1]}`;
+center=enu(meta.sitec);
+$('#lbar').style.width='35%';
+const b64=(await import('./etterzhausen_glb.js')).default;
+$('#lbar').style.width='70%';
+const glbBuf=(()=>{const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer})();
+const gltf=await new Promise((res,rej)=>new GLTFLoader().parse(glbBuf,'',res,rej));
+const G={}; // Kategorien
+const aniso=renderer.capabilities.getMaxAnisotropy();
+gltf.scene.traverse(o=>{
+  if(!o.isMesh) return;
+  const cat=o.name.split('__')[0]; (G[cat]=G[cat]||[]).push(o);
+  o.castShadow=true; o.receiveShadow=true;
+  const m=o.material;
+  if(m.map){m.map.anisotropy=aniso; o.castShadow=false}
+  if(m.name==='glas'){glassMats.push(m);m.transparent=true;m.depthWrite=false;o.castShadow=false;m.userData.env=1.2}
+  if(m.isMeshStandardMaterial) stdMats.push(m);
+});
+scene.add(gltf.scene);
+const grp=(c)=>G[c]||[];
+const T={bestand:grp('Gelaende_Bestand')[0],planung:grp('Gelaende_Planung')[0]};
+T.bestand.castShadow=false;T.planung.castShadow=false;
+T.bestand.material.roughness=1;T.planung.material.roughness=1;
+stdMats.forEach(m=>{if(m.userData.env===undefined&&m.map)m.userData.env=0.35});
+
+// ---------- Geländeblock (Sockel mit Schichtung) und Schattenfänger
+const tb=new THREE.Box3().setFromObject(T.planung);
+const baseY=tb.min.y-7;
+function skirt(mesh,cols,rows){
+  const pos=mesh.geometry.attributes.position, P=(r,c)=>new THREE.Vector3(pos.getX(r*cols+c),pos.getY(r*cols+c),pos.getZ(r*cols+c));
+  const edges=[]; for(let c=0;c<cols;c++)edges.push(P(0,c)); const s=[...edges];
+  const e1=[];for(let r=0;r<rows;r++)e1.push(P(r,cols-1));
+  const n1=[];for(let c=cols-1;c>=0;c--)n1.push(P(rows-1,c));
+  const w1=[];for(let r=rows-1;r>=0;r--)w1.push(P(r,0));
+  const verts=[],uvs=[],idx=[]; let dist=0;
+  for(const line of [s,e1,n1,w1]){
+    for(let i=0;i<line.length;i++){
+      const a=line[i]; if(i>0)dist+=a.distanceTo(line[i-1]);
+      const k=verts.length/3;
+      verts.push(a.x,a.y,a.z,a.x,baseY,a.z); uvs.push(dist/14,a.y,dist/14,baseY);
+      if(i>0){idx.push(k-2,k,k-1,k-1,k,k+1)}
+    }
+    dist+=1;
+  }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2)); g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+function strata(){
+  const c=document.createElement('canvas'); c.width=64; c.height=128; const x=c.getContext('2d');
+  x.fillStyle='#8a7860'; x.fillRect(0,0,64,128);
+  for(let i=0;i<128;i++){x.fillStyle=`rgba(${60+((i*37)%30)},${44+((i*17)%20)},30,${0.10+((i*53)%10)/60})`;x.fillRect(0,i,64,1)}
+  x.fillStyle='rgba(30,20,10,.55)'; x.fillRect(0,0,64,2);
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.colorSpace=THREE.SRGBColorSpace; t.repeat.set(1,1/16); t.anisotropy=4; return t;
+}
+const skMat=new THREE.MeshStandardMaterial({map:strata(),roughness:1,side:THREE.DoubleSide}); skMat.userData.env=0.3; stdMats.push(skMat);
+const skB=new THREE.Mesh(skirt(T.bestand,meta.grid.b[0],meta.grid.b[1]),skMat), skP=new THREE.Mesh(skirt(T.planung,meta.grid.p[0],meta.grid.p[1]),skMat);
+skB.receiveShadow=skP.receiveShadow=true; scene.add(skB,skP);
+const catcher=new THREE.Mesh(new THREE.PlaneGeometry(900,900),new THREE.ShadowMaterial({opacity:0.22}));
+catcher.rotation.x=-Math.PI/2; catcher.position.set((tb.min.x+tb.max.x)/2,baseY-0.03,(tb.min.z+tb.max.z)/2); catcher.receiveShadow=true; scene.add(catcher);
+const plate=new THREE.Mesh(new THREE.PlaneGeometry(tb.max.x-tb.min.x,tb.max.z-tb.min.z),new THREE.MeshStandardMaterial({color:0x5b5547,roughness:1}));
+plate.rotation.x=-Math.PI/2; plate.position.set((tb.min.x+tb.max.x)/2,baseY,(tb.min.z+tb.max.z)/2); scene.add(plate);
+
+// ---------- Overlays (nutzen Gelände-Geometrie + UV)
+const texL=new THREE.TextureLoader();
+function ovTex(f){const t=texL.load(f);t.colorSpace=THREE.SRGBColorSpace;t.flipY=false;t.anisotropy=8;return t}
+const OV={biotop:ovTex('ov_biotop.png'),umriss:ovTex('ov_biotop_lines.png'),anbau:ovTex('ov_anbauverbot.png'),eingriff:ovTex('ov_eingriff.png')};
+const ovMeshes={bestand:{},planung:{}};
+for(const mode of ['bestand','planung']) for(const k of Object.keys(OV)){
+  const m=new THREE.Mesh(T[mode].geometry,new THREE.MeshBasicMaterial({map:OV[k],transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3,opacity:k==='eingriff'?0.9:1}));
+  m.renderOrder=3; m.visible=false; scene.add(m); ovMeshes[mode][k]=m;
+}
+
+// ---------- Höhenlinien
+function contourGroup(list){
+  const g=new THREE.Group(); const pa=[],pb=[];
+  for(const c of list){const tgt=(Math.round(c.z+360)%5===0)?pb:pa; const p=c.p;
+    for(let i=0;i<p.length-1;i++) tgt.push(p[i][0],c.z+0.14,-p[i][1],p[i+1][0],c.z+0.14,-p[i+1][1]);}
+  const mk=(arr,col,op)=>{const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));return new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:op,toneMapped:false}))};
+  g.add(mk(pa,0x6b3f12,0.55),mk(pb,0x3b1f06,0.95)); g.visible=false; scene.add(g); return g;
+}
+const CT={bestand:contourGroup(contours.bestand),planung:contourGroup(contours.planung)};
+
+// ---------- Bäume (instanziert, schematisch)
+function jitterGeo(geo,amp,seed){const p=geo.attributes.position;let s=seed;const r=()=>{s=(s*16807)%2147483647;return s/2147483647};
+  const map=new Map();for(let i=0;i<p.count;i++){const k=p.getX(i).toFixed(3)+','+p.getY(i).toFixed(3)+','+p.getZ(i).toFixed(3);if(!map.has(k))map.set(k,1+(r()-.5)*amp);const f=map.get(k);p.setXYZ(i,p.getX(i)*f,p.getY(i)*f,p.getZ(i)*f)}
+  geo.computeVertexNormals();return geo}
+const _ico=new THREE.IcosahedronGeometry(1,2); _ico.deleteAttribute('normal'); _ico.deleteAttribute('uv');
+const crownGeo=jitterGeo(mergeVertices(_ico,1e-4),0.34,7), trunkGeo=new THREE.CylinderGeometry(0.55,1,1,7); trunkGeo.translate(0,0.5,0);
+const mCrown=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.95,flatShading:false}), mTrunk=new THREE.MeshStandardMaterial({color:0x4b3a2a,roughness:1});
+mCrown.userData.env=0.5; mTrunk.userData.env=0.3; stdMats.push(mCrown,mTrunk);
+const crowns=new THREE.InstancedMesh(crownGeo,mCrown,trees.length), trunks=new THREE.InstancedMesh(trunkGeo,mTrunk,trees.length);
+crowns.castShadow=trunks.castShadow=true; crowns.receiveShadow=true; scene.add(crowns,trunks);
+const dm=new THREE.Object3D(), col=new THREE.Color();
+const treeBase=trees.map((t,i)=>{
+  const sd=t.s; const hue=0.22+0.07*sd, sat=0.38+0.2*((sd*7)%1), lig=0.20+0.16*((sd*13)%1);
+  if(t.c==='L112') col.setHSL(hue-0.01,sat+0.1,lig-0.06); else if(t.k==='kiefer') col.setHSL(0.40,0.26,0.13+0.06*((sd*13)%1)); else if(t.k==='busch') col.setHSL(hue+0.02,sat+0.05,lig-0.01); else col.setHSL(hue,sat+0.08,lig-0.03);
+  crowns.setColorAt(i,col); return t;});
+function placeTrees(){
+  trees.forEach((t,i)=>{
+    const vis=S.L.baeume && !(S.mode==='planung'&&t.rem); const k=vis?1:0.0001;
+    if(t.k==='laub'||t.k==='kiefer'){
+      const ch=t.h*0.62; dm.position.set(t.x,t.z,-t.y); dm.rotation.set(0,t.s*6.28,0); dm.scale.set(t.r*0.16*k+0.0001*(1-k),t.h*0.6*k+0.0001,t.r*0.16*k+0.0001); dm.updateMatrix(); trunks.setMatrixAt(i,dm.matrix);
+      dm.position.set(t.x,t.z+t.h*0.62,-t.y); dm.scale.set(t.r*k,t.h*0.38*k,t.r*k); dm.updateMatrix(); crowns.setMatrixAt(i,dm.matrix);
+    }else{
+      dm.position.set(t.x,t.z,-t.y); dm.rotation.set(0,t.s*6.28,0); dm.scale.setScalar(0.0001); dm.updateMatrix(); trunks.setMatrixAt(i,dm.matrix);
+      dm.position.set(t.x,t.z+t.h*0.42,-t.y); dm.scale.set(t.r*k,t.h*0.5*k,t.r*k); dm.updateMatrix(); crowns.setMatrixAt(i,dm.matrix);
+    }
+  });
+  crowns.instanceMatrix.needsUpdate=trunks.instanceMatrix.needsUpdate=true; if(crowns.instanceColor)crowns.instanceColor.needsUpdate=true;
+}
+
+// ---------- Leuchten (Punktlichter nachts)
+for(const p of meta.lamps){const l=new THREE.PointLight(0xffd9a0,0,26,1.6); l.position.copy(enu(p)); scene.add(l); lampLights.push(l);}
+
+// ---------- Beschriftung mit Leitlinien (Linie vom Schild runter auf die Fläche, Schilder weichen sich aus)
+const dotTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.fillStyle='#101412';x.beginPath();x.arc(32,32,30,0,7);x.fill();x.fillStyle='#fff';x.beginPath();x.arc(32,32,21,0,7);x.fill();const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t})();
+const leaderGrp=new THREE.Group(); scene.add(leaderGrp);
+const svgNS='http://www.w3.org/2000/svg', lsvg=document.getElementById('leaders');
+const labEls=meta.labels.map(l=>{
+  const d=document.createElement('div');
+  d.className='lab '+(l.k==='bio'?'bio':(l.k==='str'?'str':''));
+  const colr=l.c||(l.k==='str'?'#aab0b8':(l.k==='wand'?'#d9d2c4':'#5fd0a0')); d.style.borderLeftColor=colr; d.textContent=l.t; $('#labels').appendChild(d);
+  const g=document.createElementNS(svgNS,'g'), h1=document.createElementNS(svgNS,'line'), h2=document.createElementNS(svgNS,'line');
+  h1.setAttribute('stroke','rgba(10,14,12,.55)'); h1.setAttribute('stroke-width','4'); h2.setAttribute('stroke',colr); h2.setAttribute('stroke-width','1.8'); h1.setAttribute('stroke-linecap','round'); h2.setAttribute('stroke-linecap','round');
+  g.append(h1,h2); lsvg.appendChild(g);
+  const dg=new THREE.BufferGeometry(); dg.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0],3));
+  const dot=new THREE.Points(dg,new THREE.PointsMaterial({map:dotTex,color:colr,size:l.k==='bio'?15:11,sizeAttenuation:false,alphaTest:0.5,transparent:true,toneMapped:false,depthWrite:false}));
+  dot.frustumCulled=false; dot.renderOrder=6; leaderGrp.add(dot);
+  return {el:d,l,g,h1,h2,dot,p:new THREE.Vector3(),b:new THREE.Vector3(),vis:true,w:0,hh:0};
+});
+function placeLabels(){
+  const pm=S.mode==='planung';
+  for(const e of labEls){
+    const a=e.l.a, z=(pm?a[3]:a[2])+0.2;
+    e.b.copy(enu([a[0],a[1],z])); e.p.copy(enu([a[0],a[1],z+e.l.h]));
+    const dp=e.dot.geometry.attributes.position; dp.setXYZ(0,e.b.x,e.b.y,e.b.z); dp.needsUpdate=true;
+    e.vis=!(e.l.m==='p'&&!pm);
+  }
+}
+const v3=new THREE.Vector3(), v4=new THREE.Vector3();
+function updateLabels(){
+  const W=innerWidth,H=innerHeight, items=[];
+  for(const e of labEls){
+    const show=!!S.L.labels&&e.vis; e.dot.visible=show;
+    let ok=false;
+    if(show){
+      v3.copy(e.b).project(camera); v4.copy(e.p).project(camera);
+      ok=v3.z<1&&v3.z>-1&&v4.z<1&&v4.z>-1&&Math.abs(v3.x)<1.15&&Math.abs(v3.y)<1.15;
+      if(ok){ if(!e.w){e.el.style.display='block';e.w=e.el.offsetWidth;e.hh=e.el.offsetHeight}
+        items.push({e,sx:(v3.x+1)/2*W,sy:(1-v3.y)/2*H,x:(v4.x+1)/2*W,y:(1-v4.y)/2*H}); }
+    }
+    if(!ok){e.el.style.display='none';e.g.style.display='none'}
+  }
+  // Schilder gegeneinander verschieben (nur senkrecht), damit sie sich nicht überdecken
+  items.sort((p,q)=>p.y-q.y);
+  for(let it=0;it<8;it++){
+    for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+      const A=items[i],B=items[j]; if(Math.abs(A.x-B.x)>=(A.e.w+B.e.w)/2+4)continue;
+      const gap=B.y-A.y, need=Math.max(A.e.hh,B.e.hh)+5; if(gap>=need)continue;
+      const d=need-gap; A.y-=d*0.6; B.y+=d*0.4;
+    }
+  }
+  for(const m of items){
+    const {e}=m; e.el.style.display='block';
+    e.el.style.transform=`translate(${m.x.toFixed(1)}px,${m.y.toFixed(1)}px) translate(-50%,-100%)`;
+    const ay=(m.sy>m.y-e.hh*0.5)?m.y:m.y-e.hh;
+    for(const ln of [e.h1,e.h2]){ln.setAttribute('x1',m.x.toFixed(1));ln.setAttribute('y1',ay.toFixed(1));ln.setAttribute('x2',m.sx.toFixed(1));ln.setAttribute('y2',m.sy.toFixed(1))}
+    e.g.style.display='';
+  }
+  for(const m of measLabels){v3.copy(m.p).project(camera);const ok=v3.z<1;m.el.style.display=ok?'block':'none';if(ok)m.el.style.transform=`translate(${((v3.x+1)/2*W).toFixed(1)}px,${((1-v3.y)/2*H).toFixed(1)}px) translate(-50%,-130%)`}
+}
+$$('.lab').forEach(e=>e.style.left=e.style.top='0');
+
+// ---------- Ebenen anwenden
+function apply(){
+  const plan=S.mode==='planung';
+  T.bestand.visible=skB.visible=!plan; T.planung.visible=skP.visible=plan;
+  for(const c of ['Haeuser']) grp(c).forEach(o=>o.visible=plan);
+  grp('Stuetzwaende').forEach(o=>o.visible=plan&&!!S.L.waende);
+  ['Fahrzeuge','Strassenausstattung'].forEach(c=>grp(c).forEach(o=>o.visible=plan&&!!S.L.fahrzeuge));
+  grp('Kontext').forEach(o=>o.visible=!!S.L.kontext);
+  for(const mode of ['bestand','planung']) for(const k of Object.keys(OV)) ovMeshes[mode][k].visible=(S.mode===mode)&&!!(k==='umriss'?S.L.labels:S.L[k]);
+  CT.bestand.visible=!plan&&!!S.L.kontur; CT.planung.visible=plan&&!!S.L.kontur;
+  placeTrees(); placeLabels();
+  document.body.dataset.mode=S.mode;
+}
+
+// ---------- Kamera
+function setView(key,instant){
+  const c=meta.cams[key]; if(!c)return;
+  const p=enu(c.pos), t=enu(c.tgt);
+  if(key==='biotope'&&camera.aspect<1.25) p.sub(t).multiplyScalar(Math.min(1.6,1.25/camera.aspect)).add(t);   // Hochformat: weiter weg
+  if(instant){camera.position.copy(p);controls.target.copy(t);controls.update();return}
+  tween(p,t);
+  $$('#cams .btn').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.k===key)));
+}
+let anim=null;
+function tween(p,t,dur=1100){anim={p0:camera.position.clone(),t0:controls.target.clone(),p1:p,t1:t,s:performance.now(),d:dur};controls.enabled=false}
+function stepAnim(now){
+  if(!anim)return; let k=Math.min(1,(now-anim.s)/anim.d); const e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+  camera.position.lerpVectors(anim.p0,anim.p1,e); controls.target.lerpVectors(anim.t0,anim.t1,e);
+  if(k>=1){anim=null;controls.enabled=true}
+}
+for(const [k,v] of Object.entries(meta.cams)){const b=document.createElement('button');b.className='btn';b.dataset.k=k;b.textContent=v.name;b.setAttribute('aria-pressed','false');b.onclick=()=>{setView(k);if(innerWidth<=760)$('#panel').classList.add('closed')};$('#cams').appendChild(b)}
+
+// ---------- Messen / Doppelklick
+const ray=new THREE.Raycaster(); const ndc=new THREE.Vector2();
+function pick(ev){
+  const r=renderer.domElement.getBoundingClientRect(); ndc.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
+  const targets=[]; scene.traverse(o=>{if(o.isMesh&&o.visible&&!o.isInstancedMesh&&o!==catcher&&o!==plate&&!Object.values(ovMeshes.bestand).includes(o)&&!Object.values(ovMeshes.planung).includes(o)&&o.parent&&o.material&&!(o.material.name==='glas'))targets.push(o)});
+  const h=ray.intersectObjects(targets,false); return h.length?h[0].point:null;
+}
+let measuring=false, mpts=[], measObjs=[], measLabels=[];
+const mbtn=$('#mbtn'), meas=$('#meas');
+function mclear(){measObjs.forEach(o=>{scene.remove(o)});measObjs=[];measLabels.forEach(l=>l.el.remove());measLabels=[];mpts=[]}
+function mset(on){measuring=on;mbtn.classList.toggle('on',on);mbtn.textContent=on?'Messen: zwei Punkte klicken':'Strecke messen';meas.style.display=on?'block':'none';meas.textContent='Zwei Punkte im Modell anklicken';renderer.domElement.style.cursor=on?'crosshair':'';if(on)mclear()}
+mbtn.onclick=()=>mset(!measuring); $('#mclr').onclick=()=>{mclear();mset(false)};
+function marker(p){const m=new THREE.Mesh(new THREE.SphereGeometry(0.28,12,8),new THREE.MeshBasicMaterial({color:0xffd23f,depthTest:false,toneMapped:false}));m.position.copy(p);m.renderOrder=10;scene.add(m);measObjs.push(m)}
+let down=null;
+renderer.domElement.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY]});
+renderer.domElement.addEventListener('pointerup',e=>{
+  if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>5)return; down=null;
+  if(!measuring||e.button!==0)return;
+  const p=pick(e); if(!p)return;
+  if(mpts.length>=2){mclear()}
+  mpts.push(p.clone()); marker(p);
+  if(mpts.length===2){
+    const [a,b]=mpts; const geo=new THREE.BufferGeometry().setFromPoints([a,b]); const ln=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffd23f,depthTest:false,toneMapped:false})); ln.renderOrder=10; scene.add(ln); measObjs.push(ln);
+    const d3=a.distanceTo(b), dh=b.y-a.y, d2=Math.hypot(b.x-a.x,b.z-a.z), gr=d2>0.01?Math.abs(dh)/d2*100:0;
+    const el=document.createElement('div'); el.className='mlab'; el.innerHTML=`${d3.toFixed(1).replace('.',',')} m<br>Δh ${dh>=0?'+':''}${dh.toFixed(1).replace('.',',')} m · ${gr.toFixed(0)} %`; document.body.appendChild(el);
+    measLabels.push({el,p:a.clone().lerp(b,0.5)}); meas.textContent='Messung fertig, erneut klicken startet neu';
+  }else meas.textContent='Zweiten Punkt anklicken';
+});
+renderer.domElement.addEventListener('dblclick',e=>{if(measuring)return;const p=pick(e);if(!p)return;const off=camera.position.clone().sub(controls.target);tween(p.clone().add(off.multiplyScalar(0.55)),p,800)});
+
+// ---------- UI
+$$('input[name=mode]').forEach(r=>r.addEventListener('change',()=>{S.mode=r.value;apply();mclear()}));
+$$('input[data-l]').forEach(c=>c.addEventListener('change',()=>{S.L[c.dataset.l]=c.checked?1:0;apply()}));
+$$('input[data-l]').forEach(c=>{S.L[c.dataset.l]=c.checked?1:0});
+$('#hour').addEventListener('input',e=>{S.hour=+e.target.value;sunDirty=true}); $('#season').addEventListener('change',e=>{S.season=e.target.value;sunDirty=true});
+const panel=$('#panel'),tog=$('#toggle');
+tog.onclick=()=>{const c=panel.classList.toggle('closed');tog.setAttribute('aria-expanded',String(!c))};
+if(innerWidth<=760)panel.classList.add('closed');
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key==='b'||e.key==='B'){$('input[value=bestand]').click()}if(e.key==='p'||e.key==='P'){$('input[value=planung]').click()}if(e.key==='Escape'){mset(false);mclear()}});
+
+// ---------- Biotopliste (Klick fliegt zur Fläche)
+function focusBio(b){
+  const z=(S.mode==='planung'?b.a[3]:b.a[2]); const t=enu([b.a[0],b.a[1],z]); const k=Math.min(150,Math.max(32,b.r*0.9));
+  tween(t.clone().add(new THREE.Vector3(0.2*k,0.7*k,0.85*k)),t);
+  $$('#cams .btn').forEach(x=>x.setAttribute('aria-pressed','false'));
+  if(innerWidth<=760)$('#panel').classList.add('closed');
+}
+for(const b of meta.bios){
+  const r=document.createElement('button'); r.className='bio-row'; r.type='button';
+  r.innerHTML=`<span class="sw" style="background:${b.c}"></span><span><b>Nr. ${b.n} · ${b.code}</b> ${b.name}${b.alt?` (bisher ${b.alt})`:''}<small>PAR30 = ${b.par} · ${b.area.toLocaleString('de-DE')} m²</small></span>`;
+  r.onclick=()=>focusBio(b); $('#biolist').appendChild(r);
+}
+
+// ---------- Größe, Schleife
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+addEventListener('resize',resize); resize();
+const bx=meta.bounds; const clampT=()=>{const t=controls.target;t.x=Math.min(Math.max(t.x,bx[0]),bx[1]);t.z=Math.min(Math.max(t.z,-bx[3]),-bx[2]);t.y=Math.min(Math.max(t.y,-6),40)};
+const needle=$('#needle'); const fw=new THREE.Vector3();
+function frame(now){
+  stepAnim(now); controls.update(); clampT();
+  if(sunDirty){sunDirty=false;updateSun()}
+  camera.getWorldDirection(fw); const yaw=Math.atan2(fw.x,-fw.z); needle.setAttribute('transform',`rotate(${(-yaw*180/Math.PI).toFixed(1)} 27 27)`);
+  updateLabels(); renderer.render(scene,camera);
+}
+apply(); setView('luft',true); updateSun();
+renderer.setAnimationLoop(frame);
+$('#load').remove();
+window.__ready=true; window.__dbg={scene,camera,controls,S,apply,setView,focusBio,meta,updateSun,renderer,frame,markDirty:()=>{sunDirty=true}};
+</script>
