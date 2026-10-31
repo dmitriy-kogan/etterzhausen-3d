@@ -123,7 +123,7 @@ details .warn{color:var(--warn)}
   <label class="chk"><input type="checkbox" data-l="fahrzeuge" checked>Fahrzeuge und Leuchten</label>
   <label class="chk"><input type="checkbox" data-l="kontext" checked><span>Umgebungsbauten<br><small>Höhe angenommen</small></span></label>
   <label class="chk"><input type="checkbox" data-l="baeume" checked><span>Bäume und Gehölze<br><small>schematisch, nicht kartiert</small></span></label>
-  <label class="chk"><input type="checkbox" data-l="kontur"><span>Höhenlinien 1 m<br><small>Zahlen = Höhe in m ü. NN</small></span></label>
+  <label class="chk"><input type="checkbox" data-l="kontur" checked><span>Höhenlinien 1 m<br><small>Zahlen = Höhe in m ü. NN</small></span></label>
   <label class="chk"><input type="checkbox" data-l="biotop" checked><span class="sw" style="background:linear-gradient(90deg,#ca8d4a 0 25%,#f76e51 25% 50%,#4dc7a7 50% 75%,#f6e6b0 75%)"></span><span>Biotopkartierung wie im Gutachten<br><small>Farben und Schraffuren nach Legende, Abb. 2, S. 5</small></span></label>
   <label class="chk"><input type="checkbox" data-l="eingriff"><span class="sw" style="background:#ffc800"></span><span>Eingriffszone<br><small>inkl. 2 m Arbeitsraum</small></span></label>
   <label class="chk"><input type="checkbox" data-l="labels" checked><span>Beschriftung mit Linien<br><small>Linie zeigt auf die gemeinte Fläche</small></span></label>
@@ -180,7 +180,7 @@ import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const coarse=matchMedia('(pointer:coarse)').matches;
 const enu=(p)=>new THREE.Vector3(p[0],p[2],-p[1]);       // lokal (E,N,U) -> three (x,y,z)
-const S={mode:'planung',L:{waende:1,fahrzeuge:1,kontext:1,baeume:1,kontur:0,biotop:1,eingriff:0,labels:1},hour:15.5,season:'sommer'};
+const S={mode:'planung',L:{waende:1,fahrzeuge:1,kontext:1,baeume:1,kontur:1,biotop:1,eingriff:0,labels:1},hour:15.5,season:'sommer'};
 
 // ---------- Renderer / Szene
 const stage=$('#stage');
@@ -244,7 +244,7 @@ function updateSun(){
 }
 
 // ---------- Laden
-const [meta,trees,contours]=await Promise.all(['meta.json','trees.json','contours.json?v=h1'].map(f=>fetch(f).then(r=>r.json())));
+const [meta,trees,contours]=await Promise.all(['meta.json?v=s1','trees.json','contours.json?v=h1'].map(f=>fetch(f).then(r=>r.json())));
 $('#rl').textContent=Math.round(meta.stats.road_len);
 $('#tl').textContent=`${meta.stats.tree_rem.L112[0]} von ${meta.stats.tree_rem.L112[1]}`; $('#tb').textContent=`${meta.stats.tree_rem.B212[0]} von ${meta.stats.tree_rem.B212[1]}`;
 center=enu(meta.sitec);
@@ -562,7 +562,7 @@ function frame(now){
   camera.getWorldDirection(fw); const yaw=Math.atan2(fw.x,-fw.z); needle.setAttribute('transform',`rotate(${(-yaw*180/Math.PI).toFixed(1)} 27 27)`);
   updateLabels(); updateDimLabels(); renderer.render(scene,camera);
 }
-apply(); setView('luft',true); updateSun();
+apply(); setView('start',true); updateSun();
 renderer.setAnimationLoop(frame);
 $('#load').remove();
 window.__ready=true; window.__dbg={scene,camera,controls,S,apply,setView,focusBio,meta,updateSun,renderer,frame,markDirty:()=>{sunDirty=true}};
