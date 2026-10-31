@@ -311,7 +311,7 @@ plate.rotation.x=-Math.PI/2; plate.position.set((tb.min.x+tb.max.x)/2,baseY,(tb.
 // ---------- Overlays (nutzen Gelände-Geometrie + UV)
 const texL=new THREE.TextureLoader();
 function ovTex(f){const t=texL.load(f);t.colorSpace=THREE.SRGBColorSpace;t.flipY=false;t.anisotropy=8;return t}
-const OV={biotop:ovTex('ov_biotop.png'),umriss:ovTex('ov_biotop_lines.png'),anbau:ovTex('ov_anbauverbot.png'),eingriff:ovTex('ov_eingriff.png')};
+const OV={biotop:ovTex('ov_biotop.png?v=g2'),umriss:ovTex('ov_biotop_lines.png?v=g2'),anbau:ovTex('ov_anbauverbot.png'),eingriff:ovTex('ov_eingriff.png')};
 const ovMeshes={bestand:{},planung:{}};
 for(const mode of ['bestand','planung']) for(const k of Object.keys(OV)){
   const m=new THREE.Mesh(T[mode].geometry,new THREE.MeshBasicMaterial({map:OV[k],transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3,opacity:k==='eingriff'?0.9:(k==='biotop'?0.88:1)}));
