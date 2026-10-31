@@ -123,7 +123,7 @@ details .warn{color:var(--warn)}
   <label class="chk"><input type="checkbox" data-l="fahrzeuge" checked>Fahrzeuge und Leuchten</label>
   <label class="chk"><input type="checkbox" data-l="kontext" checked><span>Umgebungsbauten<br><small>Höhe angenommen</small></span></label>
   <label class="chk"><input type="checkbox" data-l="baeume" checked><span>Bäume und Gehölze<br><small>schematisch, nicht kartiert</small></span></label>
-  <label class="chk"><input type="checkbox" data-l="kontur">Höhenlinien 1 m</label>
+  <label class="chk"><input type="checkbox" data-l="kontur"><span>Höhenlinien 1 m<br><small>Zahlen = Höhe in m ü. NN</small></span></label>
   <label class="chk"><input type="checkbox" data-l="biotop" checked><span class="sw" style="background:linear-gradient(90deg,#ca8d4a 0 25%,#f76e51 25% 50%,#4dc7a7 50% 75%,#f6e6b0 75%)"></span><span>Biotopkartierung wie im Gutachten<br><small>Farben und Schraffuren nach Legende, Abb. 2, S. 5</small></span></label>
   <label class="chk"><input type="checkbox" data-l="eingriff"><span class="sw" style="background:#ffc800"></span><span>Eingriffszone<br><small>inkl. 2 m Arbeitsraum</small></span></label>
   <label class="chk"><input type="checkbox" data-l="labels" checked><span>Beschriftung mit Linien<br><small>Linie zeigt auf die gemeinte Fläche</small></span></label>
@@ -244,7 +244,7 @@ function updateSun(){
 }
 
 // ---------- Laden
-const [meta,trees,contours]=await Promise.all(['meta.json','trees.json','contours.json'].map(f=>fetch(f).then(r=>r.json())));
+const [meta,trees,contours]=await Promise.all(['meta.json','trees.json','contours.json?v=h1'].map(f=>fetch(f).then(r=>r.json())));
 $('#rl').textContent=Math.round(meta.stats.road_len);
 $('#tl').textContent=`${meta.stats.tree_rem.L112[0]} von ${meta.stats.tree_rem.L112[1]}`; $('#tb').textContent=`${meta.stats.tree_rem.B212[0]} von ${meta.stats.tree_rem.B212[1]}`;
 center=enu(meta.sitec);
@@ -316,6 +316,13 @@ const ovMeshes={bestand:{},planung:{}};
 for(const mode of ['bestand','planung']) for(const k of Object.keys(OV)){
   const m=new THREE.Mesh(T[mode].geometry,new THREE.MeshBasicMaterial({map:OV[k],transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3,opacity:k==='eingriff'?0.9:(k==='biotop'?0.88:1)}));
   m.renderOrder=3; m.visible=false; scene.add(m); ovMeshes[mode][k]=m;
+}
+
+// ---------- Höhenzahlen direkt auf dem Gelände (Karten-Stil), gehören zur Ebene „Höhenlinien“
+const ovH={};
+for(const mode of ['bestand','planung']){
+  const m=new THREE.Mesh(T[mode].geometry,new THREE.MeshBasicMaterial({map:ovTex(`ov_hoehen_${mode}.png?v=h1`),transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-5,polygonOffsetUnits:-5}));
+  m.renderOrder=4; m.visible=false; scene.add(m); ovH[mode]=m;
 }
 
 // ---------- Höhenlinien
@@ -459,7 +466,7 @@ function apply(){
   ['Fahrzeuge','Strassenausstattung'].forEach(c=>grp(c).forEach(o=>o.visible=plan&&!!S.L.fahrzeuge));
   grp('Kontext').forEach(o=>o.visible=!!S.L.kontext);
   for(const mode of ['bestand','planung']) for(const k of Object.keys(OV)) ovMeshes[mode][k].visible=(S.mode===mode)&&!!(k==='umriss'?S.L.labels:S.L[k]);
-  CT.bestand.visible=!plan&&!!S.L.kontur; CT.planung.visible=plan&&!!S.L.kontur;
+  CT.bestand.visible=!plan&&!!S.L.kontur; CT.planung.visible=plan&&!!S.L.kontur; ovH.bestand.visible=!plan&&!!S.L.kontur; ovH.planung.visible=plan&&!!S.L.kontur;
   placeTrees(); placeLabels();
   document.body.dataset.mode=S.mode;
 }
