@@ -1,3 +1,7 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}html,body{margin:0}</style>
 <meta name="robots" content="noindex,nofollow">
 <title>Etterzhausen Baufeld 3D</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -119,7 +123,7 @@ details .warn{color:var(--warn)}
   <label class="chk"><input type="checkbox" data-l="kontext" checked><span>Umgebungsbauten<br><small>Höhe angenommen</small></span></label>
   <label class="chk"><input type="checkbox" data-l="baeume" checked><span>Bäume und Gehölze<br><small>schematisch, nicht kartiert</small></span></label>
   <label class="chk"><input type="checkbox" data-l="kontur">Höhenlinien 1 m</label>
-  <label class="chk"><input type="checkbox" data-l="biotop"><span class="sw" style="background:linear-gradient(90deg,#d62828 0 17%,#f79632 17% 34%,#52b788 34% 51%,#ecc92a 51% 68%,#4276d6 68% 84%,#9e68d6 84%)"></span><span>Biotopflächen farbig füllen<br><small>Umrisse sind mit „Beschriftung“ immer sichtbar</small></span></label>
+  <label class="chk"><input type="checkbox" data-l="biotop" checked><span class="sw" style="background:linear-gradient(90deg,#ca8d4a 0 25%,#f76e51 25% 50%,#4dc7a7 50% 75%,#f6e6b0 75%)"></span><span>Biotopkartierung wie im Gutachten<br><small>Farben und Schraffuren nach Legende, Abb. 2, S. 5</small></span></label>
   <label class="chk"><input type="checkbox" data-l="anbau"><span class="sw" style="background:repeating-linear-gradient(135deg,#b00020 0 2px,transparent 2px 5px)"></span>20 m Anbauverbot St 2660</label>
   <label class="chk"><input type="checkbox" data-l="eingriff"><span class="sw" style="background:#ffc800"></span><span>Eingriffszone<br><small>inkl. 2 m Arbeitsraum</small></span></label>
   <label class="chk"><input type="checkbox" data-l="labels" checked><span>Beschriftung mit Linien<br><small>Linie zeigt auf die gemeinte Fläche</small></span></label>
@@ -127,6 +131,7 @@ details .warn{color:var(--warn)}
   <h2>Biotopflächen</h2>
   <div id="biolist"></div>
   <p class="read" style="margin:6px 0 0">Alle 12 Kartierpolygone. Klick fliegt zur Fläche. Fläche = Kartierfläche des Polygons, nicht Flurstücksfläche.</p>
+  <p class="read" style="margin:6px 0 0"><span class="sw" style="display:inline-block;width:12px;height:12px;vertical-align:-2px;border:1.5px solid #d42426;background:transparent"></span> Rote Umrandung mit Zähnchen nach außen = geschützt nach § 30 BNatSchG (PAR30 = Ja). Darstellung wie in der Karte des Gutachtens (FFP, Abb. 2, S. 5), Farben und Schraffuren aus deren Legende. Die Karte ist lagegenau auf die Kartierpolygone gelegt, Codes B112 und L122 nach Fassung vom 27.10.2026.</p>
 
   <h2>Sonnenstand</h2>
   <select id="season" aria-label="Jahreszeit">
@@ -175,7 +180,7 @@ import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const coarse=matchMedia('(pointer:coarse)').matches;
 const enu=(p)=>new THREE.Vector3(p[0],p[2],-p[1]);       // lokal (E,N,U) -> three (x,y,z)
-const S={mode:'planung',L:{waende:1,fahrzeuge:1,kontext:1,baeume:1,kontur:0,biotop:0,anbau:0,eingriff:0,labels:1},hour:15.5,season:'sommer'};
+const S={mode:'planung',L:{waende:1,fahrzeuge:1,kontext:1,baeume:1,kontur:0,biotop:1,anbau:0,eingriff:0,labels:1},hour:15.5,season:'sommer'};
 
 // ---------- Renderer / Szene
 const stage=$('#stage');
@@ -309,7 +314,7 @@ function ovTex(f){const t=texL.load(f);t.colorSpace=THREE.SRGBColorSpace;t.flipY
 const OV={biotop:ovTex('ov_biotop.png'),umriss:ovTex('ov_biotop_lines.png'),anbau:ovTex('ov_anbauverbot.png'),eingriff:ovTex('ov_eingriff.png')};
 const ovMeshes={bestand:{},planung:{}};
 for(const mode of ['bestand','planung']) for(const k of Object.keys(OV)){
-  const m=new THREE.Mesh(T[mode].geometry,new THREE.MeshBasicMaterial({map:OV[k],transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3,opacity:k==='eingriff'?0.9:1}));
+  const m=new THREE.Mesh(T[mode].geometry,new THREE.MeshBasicMaterial({map:OV[k],transparent:true,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3,opacity:k==='eingriff'?0.9:(k==='biotop'?0.88:1)}));
   m.renderOrder=3; m.visible=false; scene.add(m); ovMeshes[mode][k]=m;
 }
 
@@ -493,9 +498,18 @@ function focusBio(b){
   $$('#cams .btn').forEach(x=>x.setAttribute('aria-pressed','false'));
   if(innerWidth<=760)$('#panel').classList.add('closed');
 }
+// Legenden-Chips wie im Gutachten (Abb. 2, S. 5): Linienabstand/-richtung nach Karte
+const OCK='#ca8d4a', CRM='#f0debc';
+const swatch=code=>({
+  B222:OCK, B111:`repeating-linear-gradient(180deg,${OCK} 0 3px,${CRM} 3px 4px)`,
+  B112:`repeating-linear-gradient(90deg,${OCK} 0 3px,${CRM} 3px 4px)`,
+  L122:`repeating-linear-gradient(90deg,transparent 0 3px,${CRM} 3px 4px),repeating-linear-gradient(135deg,transparent 0 3px,${CRM} 3px 4px),${OCK}`,
+  N122:`radial-gradient(circle at 50% 50%,#1b4e40 0 1.3px,transparent 1.6px) 0 0/5px 5px,#4dc7a7`,
+  G312:'#f76e51', O112:'#f6e6b0'
+})[code]||'#999';
 for(const b of meta.bios){
   const r=document.createElement('button'); r.className='bio-row'; r.type='button';
-  r.innerHTML=`<span class="sw" style="background:${b.c}"></span><span><b>Nr. ${b.n} · ${b.code}</b> ${b.name}${b.alt?` (bisher ${b.alt})`:''}<small>PAR30 = ${b.par} · ${b.area.toLocaleString('de-DE')} m²</small></span>`;
+  r.innerHTML=`<span class="sw" style="background:${swatch(b.code)}"></span><span><b>Nr. ${b.n} · ${b.code}</b> ${b.name}${b.alt?` (bisher ${b.alt})`:''}<small>PAR30 = ${b.par} · ${b.area.toLocaleString('de-DE')} m²</small></span>`;
   r.onclick=()=>focusBio(b); $('#biolist').appendChild(r);
 }
 
