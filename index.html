@@ -243,7 +243,7 @@ function updateSun(){
 }
 
 // ---------- Laden
-const [meta,trees,contours]=await Promise.all(['meta.json?v=p5','trees.json','contours.json?v=p5'].map(f=>fetch(f).then(r=>r.json())));
+const [meta,trees,contours]=await Promise.all(['meta.json?v=p6','trees.json?v=p6','contours.json?v=p5'].map(f=>fetch(f).then(r=>r.json())));
 $('#rl').textContent=Math.round(meta.stats.road_len);
 $('#tl').textContent=`${meta.stats.tree_rem.L112[0]} von ${meta.stats.tree_rem.L112[1]}`; $('#tb').textContent=`${meta.stats.tree_rem.B212[0]} von ${meta.stats.tree_rem.B212[1]}`;
 center=enu(meta.sitec);
